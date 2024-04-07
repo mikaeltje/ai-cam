@@ -11,7 +11,6 @@ const hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
 const nn = ml5.neuralNetwork({task: 'classification', debug: true});
 
 let handLandmarker = undefined;
-let runningMode = "IMAGE";
 let enableWebcamButton;
 let webcamRunning = false;
 let posesArray = [];
@@ -46,8 +45,8 @@ const createHandLandmarker = async () => {
             modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
             delegate: "GPU"
         },
-        runningMode: runningMode,
-        numHands: 2
+        runningMode: "video",
+        numHands: 1
     });
     demosSection.classList.remove("invisible");
 };
@@ -95,10 +94,7 @@ async function predictWebcam() {
     canvasElement.width = video.videoWidth;
     canvasElement.height = video.videoHeight;
 
-    if (runningMode === "IMAGE") {
-        runningMode = "VIDEO";
-        await handLandmarker.setOptions({runningMode: "VIDEO"});
-    }
+
     let startTimeMs = performance.now();
     if (lastVideoTime !== video.currentTime) {
         lastVideoTime = video.currentTime;
@@ -112,6 +108,7 @@ async function predictWebcam() {
                     posesArray.push(point.z || 0);
                 }
                 live_Data = flattenData(landmarks);
+
             }
         }
     }
@@ -261,6 +258,10 @@ function startGame() {
 }
 
 async function live() {
+    // displayErrorMessage(results[0].label);
+    const results = await nn.classify(live_Data);
+    const live_position = document.getElementById("live");
+    live_position.textContent = results[0].label;
     if (!gameStarted) {
         console.log("Het spel is nog niet begonnen");
         return;
@@ -271,7 +272,6 @@ async function live() {
     }
 
     if (canPose) {
-        const results = await nn.classify(live_Data);
 
         if (results[0].label === game[correctPoses]) {
             const gameDisplay = document.getElementById("gamedisplay");
